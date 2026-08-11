@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harness CI/CD Proof of Concept Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #111827;
+            --border-color: #1f2937;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #10b981; /* emerald-500 */
+            --primary-hover: #059669;
+            --secondary: #0ea5e9; /* sky-500 */
+            --accent: #f59e0b; /* amber-500 */
+            --code-bg: #1e293b;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Layout Container */
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-title h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .badge-harness {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--primary);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .badge-poc {
+            background-color: rgba(14, 165, 233, 0.1);
+            color: var(--secondary);
+            border-color: rgba(14, 165, 233, 0.2);
+        }
+
+        /* Two Column Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        .card-title svg {
+            color: var(--secondary);
+        }
+
+        /* Steps Timeline */
+        .step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .step-item {
+            position: relative;
+            padding-left: 2.5rem;
+        }
+
+        .step-item::before {
+            content: '';
+            position: absolute;
+            left: 0.75rem;
+            top: 1.75rem;
+            bottom: -1.25rem;
+            width: 2px;
+            background-color: var(--border-color);
+        }
+
+        .step-item:last-child::before {
+            display: none;
+        }
+
+        .step-icon {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 50%;
+            background-color: var(--code-bg);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            transition: var(--transition);
+        }
+
+        .step-item.completed .step-icon {
+            background-color: rgba(16, 185, 129, 0.2);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .step-desc {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        /* Code Viewer Tabs */
+        .tabs-header {
+            display: flex;
+            gap: 0.5rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            padding: 0.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active {
+            background-color: var(--code-bg);
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .tab-content {
+            display: none;
+            position: relative;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .code-container {
+            position: relative;
+            background-color: #030712;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        pre {
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: #e5e7eb;
+        }
+
+        .btn-copy {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--text-muted);
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-copy:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        /* Action Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #000000;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--code-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--border-color);
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        /* Webhook Simulator */
+        .console-container {
+            background-color: #030712;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .console-header {
+            background-color: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .console-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444; /* red */
+            display: inline-block;
+        }
+
+        .console-dot.active {
+            background-color: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+            animation: pulse 1.5s infinite;
+        }
+
+        .console-screen {
+            padding: 1rem;
+            height: 250px;
+            overflow-y: auto;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: #10b981; /* green text */
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .console-line {
+            line-height: 1.4;
+            opacity: 0.9;
+        }
+
+        .console-line.info {
+            color: var(--secondary);
+        }
+
+        .console-line.success {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .console-line.input {
+            color: var(--text-main);
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* Status Panels */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-box {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .info-box-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .info-box-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .info-box-value a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+
+        .info-box-value a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <header>
+            <div class="header-title">
+                <h1>Harness CI/CD Proof of Concept</h1>
+                <p>Interactive demonstration of GitHub Integration & Pipeline automation</p>
+            </div>
+            <div class="badge-container">
+                <span class="badge badge-harness">Harness Live</span>
+                <span class="badge badge-poc">POC Version 1.0</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            
+            <!-- Left Side: Explanation and Walkthrough -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>
+                        POC Walkthrough Checklist
+                    </h2>
+                    
+                    <div class="step-list">
+                        <!-- Step 1 -->
+                        <div class="step-item completed">
+                            <div class="step-icon">1</div>
+                            <div class="step-header">
+                                <span class="step-name">Set Up Harness Trial</span>
+                                <span class="badge badge-harness">Active</span>
+                            </div>
+                            <p class="step-desc">Created the free trial account on Harness.io platform for experimenting with pipeline steps.</p>
+                        </div>
+                        
+                        <!-- Step 2 -->
+                        <div class="step-item completed">
+                            <div class="step-icon">2</div>
+                            <div class="step-header">
+                                <span class="step-name">Create GitHub Connector</span>
+                            </div>
+                            <p class="step-desc">Go to <strong>Settings → Connectors → New Connector → GitHub</strong> in Harness. Authenticate with a GitHub Personal Access Token (PAT) with <code>repo</code> and <code>admin:repo_hook</code> scopes.</p>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="step-item completed">
+                            <div class="step-icon">3</div>
+                            <div class="step-header">
+                                <span class="step-name">Define Codebase Files</span>
+                            </div>
+                            <p class="step-desc">Implemented a minimal app with <code>main.py</code>, <code>Dockerfile</code>, <code>requirements.txt</code>, and the Harness pipeline specification inside <code>.harness/pipeline.yaml</code>.</p>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="step-item">
+                            <div class="step-icon">4</div>
+                            <div class="step-header">
+                                <span class="step-name">Create Webhook Trigger</span>
+                            </div>
+                            <p class="step-desc">Create a Webhook trigger inside the Harness pipeline settings, which generates a webhook URL. Paste this webhook URL in the GitHub repository's Settings → Webhooks.</p>
+                        </div>
+
+                        <!-- Step 5 -->
+                        <div class="step-item">
+                            <div class="step-icon">5</div>
+                            <div class="step-header">
+                                <span class="step-name">Trigger Pipeline Execution</span>
+                            </div>
+                            <p class="step-desc">Pushing local commits to the <code>main</code> branch will trigger the pipeline automatically via the webhook. You can simulate it on the right console!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        Codebase Files Configuration
+                    </h2>
+                    
+                    <div class="tabs-header">
+                        <button class="tab-btn active" onclick="switchTab('pipeline')">.harness/pipeline.yaml</button>
+                        <button class="tab-btn" onclick="switchTab('dockerfile')">Dockerfile</button>
+                        <button class="tab-btn" onclick="switchTab('mainpy')">main.py</button>
+                    </div>
+
+                    <!-- Pipeline Tab -->
+                    <div id="tab-pipeline" class="tab-content active">
+                        <div class="code-container">
+                            <button class="btn-copy" onclick="copyCode('code-pipeline')">Copy</button>
+                            <pre id="code-pipeline"><code>pipeline:
+  name: Test Harness CI
+  identifier: test_harness_ci
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          steps:
+            - step:
+                type: Run
+                name: Test Step
+                identifier: test
+                spec:
+                  shell: Bash
+                  command: echo "Testing Harness with GitHub"
+            - step:
+                type: Run
+                name: Build
+                identifier: build
+                spec:
+                  shell: Bash
+                  command: |
+                    python --version
+                    echo "App would be built here"
+  properties:
+    ci:
+      codebase:
+        connectorRef: github_connector_poc
+        repoName: Harness
+        branch: main</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Dockerfile Tab -->
+                    <div id="tab-dockerfile" class="tab-content">
+                        <div class="code-container">
+                            <button class="btn-copy" onclick="copyCode('code-dockerfile')">Copy</button>
+                            <pre id="code-dockerfile"><code>FROM python:3.11-slim
+COPY . /app
+WORKDIR /app
+CMD ["python", "main.py"]</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- main.py Tab -->
+                    <div id="tab-mainpy" class="tab-content">
+                        <div class="code-container">
+                            <button class="btn-copy" onclick="copyCode('code-mainpy')">Copy</button>
+                            <pre id="code-mainpy"><code>print("Hello from Harness!")</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Interaction and Simulator -->
+            <div>
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                        POC Credentials & Links
+                    </h2>
+                    
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <div class="info-box-title">Harness Console</div>
+                            <div class="info-box-value">
+                                <a href="https://app.harness.io/ng/account/5EeV6llCSrqjP_iw2C--yw/module/cv/settings" target="_blank" rel="noopener">Open Settings ↗</a>
+                            </div>
+                        </div>
+                        <div class="info-box">
+                            <div class="info-box-title">GitHub Repo</div>
+                            <div class="info-box-value">
+                                <a href="https://github.com/rifaterdemsahin/Harness" target="_blank" rel="noopener">rifaterdemsahin/Harness ↗</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <a href="https://app.harness.io/ng/account/5EeV6llCSrqjP_iw2C--yw/module/cv/settings" class="btn btn-primary" target="_blank" rel="noopener">
+                            Go to Harness Account
+                        </a>
+                        <a href="https://github.com/rifaterdemsahin/Harness" class="btn btn-secondary" target="_blank" rel="noopener">
+                            View GitHub Repo
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2 class="card-title">
+                        <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2 9a3 3 0 010-6h15a3 3 0 110 6H2zm0 8a3 3 0 100-6h15a3 3 0 100 6H2z"></path></svg>
+                        Harness Pipeline Simulator
+                    </h2>
+                    <p class="step-desc" style="margin-bottom: 1rem;">Simulate a GitHub push event sending a webhook to Harness and executing the pipeline stages defined in <code>pipeline.yaml</code>.</p>
+                    
+                    <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="runSimulation()">
+                        🚀 Simulate Webhook Trigger
+                    </button>
+
+                    <div class="console-container">
+                        <div class="console-header">
+                            <span>Pipeline Live Output Logs</span>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="console-dot" id="simulator-status-dot"></span>
+                                <span id="simulator-status-text">IDLE</span>
+                            </div>
+                        </div>
+                        <div class="console-screen" id="console-output">
+                            <span class="console-line info">[SYS] Console ready. Awaiting webhook trigger simulation...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // Tab switching logic
+        function switchTab(tabId) {
+            // Remove active classes
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active classes to selected tab
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        // Copy to clipboard logic
+        function copyCode(elementId) {
+            const codeText = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(codeText).then(() => {
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = 'Copied!';
+                btn.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
+                btn.style.color = '#10b981';
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.backgroundColor = '';
+                    btn.style.color = '';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+            });
+        }
+
+        // Webhook simulator logic
+        let simulationInterval = null;
+        function runSimulation() {
+            // Clear previous simulation if running
+            if (simulationInterval) clearInterval(simulationInterval);
+            
+            const consoleScreen = document.getElementById('console-output');
+            const statusDot = document.getElementById('simulator-status-dot');
+            const statusText = document.getElementById('simulator-status-text');
+            
+            consoleScreen.innerHTML = '';
+            statusDot.className = 'console-dot active';
+            statusText.innerText = 'RUNNING';
+
+            const logLines = [
+                { text: "[SYS] Sending mock payload to Harness webhook endpoint...", type: "info" },
+                { text: "[SYS] Webhook received successfully by Harness manager (HTTP 200).", type: "info" },
+                { text: "[PIPELINE] Initializing build execution pipeline 'test_harness_ci'...", type: "info" },
+                { text: "[PIPELINE] Selected branch: main", type: "info" },
+                { text: "[PIPELINE] Selected infrastructure: Harness Hosted Cloud (Linux Amd64)", type: "info" },
+                { text: "------------------------------------------------------------", type: "info" },
+                { text: "[STAGE 1: BUILD] Step 'Test Step' started.", type: "info" },
+                { text: "+ echo \"Testing Harness with GitHub\"", type: "input" },
+                { text: "Testing Harness with GitHub", type: "text" },
+                { text: "[STAGE 1: BUILD] Step 'Test Step' completed successfully.", type: "success" },
+                { text: "------------------------------------------------------------", type: "info" },
+                { text: "[STAGE 1: BUILD] Step 'Build' started.", type: "info" },
+                { text: "+ python --version", type: "input" },
+                { text: "Python 3.11.5", type: "text" },
+                { text: "+ echo \"App would be built here\"", type: "input" },
+                { text: "App would be built here", type: "text" },
+                { text: "[STAGE 1: BUILD] Step 'Build' completed successfully.", type: "success" },
+                { text: "------------------------------------------------------------", type: "info" },
+                { text: "[PIPELINE] Pipeline finished execution with status: SUCCESS", type: "success" },
+                { text: "[SYS] Webhook deployment simulation completed.", type: "info" }
+            ];
+
+            let lineIndex = 0;
+            
+            function printNextLine() {
+                if (lineIndex < logLines.length) {
+                    const line = logLines[lineIndex];
+                    const lineEl = document.createElement('span');
+                    lineEl.className = 'console-line ' + (line.type || '');
+                    lineEl.innerText = line.text;
+                    consoleScreen.appendChild(lineEl);
+                    consoleScreen.scrollTop = consoleScreen.scrollHeight;
+                    lineIndex++;
+                } else {
+                    clearInterval(simulationInterval);
+                    statusDot.className = 'console-dot';
+                    statusText.innerText = 'SUCCESS';
+                }
+            }
+
+            simulationInterval = setInterval(printNextLine, 600);
+        }
+    </script>
+</body>
+</html>

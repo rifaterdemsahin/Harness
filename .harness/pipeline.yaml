@@ -1,0 +1,43 @@
+pipeline:
+  name: Test Harness CI
+  identifier: test_harness_ci
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          steps:
+            - step:
+                type: Run
+                name: Test Step
+                identifier: test
+                spec:
+                  shell: Bash
+                  command: echo "Testing Harness with GitHub"
+            - step:
+                type: Run
+                name: Build
+                identifier: build
+                spec:
+                  shell: Bash
+                  command: |
+                    python --version
+                    echo "App would be built here"
+  properties:
+    ci:
+      codebase:
+        connectorRef: github_connector_poc
+        repoName: Harness
+        branch: main
